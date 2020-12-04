@@ -23,7 +23,7 @@ locals {
       hgt_in: regex("hgt:(?:([[:digit:]]+)in)?", passport)[0],
       hcl: regex("hcl:(#[0-9a-f]{6})?", passport)[0],
       ecl: regex("ecl:(amb|blu|brn|gry|grn|hzl|oth)?", passport)[0],
-      pid: regex("pid:([[:digit:]]{9})?", passport)[0],
+      pid: regex("pid:([[:digit:]]{9}(?: |$))?", passport)[0],
     }
   ]
   valid_passports = [for passport in local.parsed_passports:
