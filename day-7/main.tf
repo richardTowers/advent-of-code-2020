@@ -6,52 +6,48 @@ locals {
       regexall("(?P<count>[0-9]+) (?P<bag>[a-z]+ [a-z]+) bags?[,.]", row)
   }
 
-  containers = fileexists("containers.txt") ? split("\n", trimspace(file("containers.txt"))) : ["shiny gold"]
-  next_containers = toset(concat(local.containers, [for bag, contents in local.rules:
-    bag if length(setintersection(contents[*].bag, local.containers)) > 0
+  bag_containers = fileexists("bag_containers.txt") ? split("\n", trimspace(file("bag_containers.txt"))) : ["shiny gold"]
+  next_bag_containers = toset(concat(local.bag_containers, [for bag, contents in local.rules:
+    bag if length(setintersection(contents[*].bag, local.bag_containers)) > 0
   ]))
 
-  contained = fileexists("contained.txt") ? split("\n", trimspace(file("contained.txt"))) : [
+  bag_contents = fileexists("bag_contents.txt") ? split("\n", trimspace(file("bag_contents.txt"))) : [
     jsonencode({
       bag: "shiny gold",
       multiple: 1,
       partial: true
     })
   ]
-  parsed_contained = [for item in local.contained: jsondecode(item)]
-  non_partial = [for item in local.parsed_contained: jsonencode({
-    bag: item["bag"],
-    multiple: item["multiple"],
-    partial: false,
-  })]
-  partials = flatten([for item in local.parsed_contained:
-    [for inside in local.rules[item["bag"]]:
+  parsed_bag_contents = [for item in local.bag_contents: jsondecode(item)]
+  partials = flatten([for item in local.parsed_bag_contents:
+    [for contents in local.rules[item["bag"]]:
       jsonencode({
-        bag: inside["bag"],
-        multiple: parseint(inside["count"], 10) * item["multiple"]
+        bag: contents["bag"],
+        multiple: parseint(contents["count"], 10) * item["multiple"]
         partial: true
       })
     ] if item["partial"]
   ])
-  next_contained = concat(local.non_partial, local.partials)
+  non_partials = [for item in local.parsed_bag_contents: jsonencode(merge(item, {partial: false}))]
+  next_bag_contents = concat(local.non_partials, local.partials)
 }
 
-resource "local_file" "containers" {
-  content  = join("\n", local.next_containers)
+resource "local_file" "bag_containers" {
+  content  = join("\n", local.next_bag_containers)
   file_permission = "0666"
-  filename = "containers.txt"
+  filename = "bag_containers.txt"
 }
 
-resource "local_file" "contained" {
-  content  = join("\n", local.next_contained)
+resource "local_file" "bag_contents" {
+  content  = join("\n", local.next_bag_contents)
   file_permission = "0666"
-  filename = "contained.txt"
+  filename = "bag_contents.txt"
 }
 
 output "part_1_answer" {
-  value = length(local.next_containers) - 1 # subtract 1 for "shiny gold", which shouldn't count.
+  value = length(local.next_bag_containers) - 1 # subtract 1 for "shiny gold", which shouldn't count.
 }
 
 output "part_2_answer" {
-  value = sum(local.parsed_contained[*].multiple) - 1 # subtract 1 for "shiny gold", which shouldn't count.
+  value = sum(local.parsed_bag_contents[*].multiple) - 1 # subtract 1 for "shiny gold", which shouldn't count.
 }
