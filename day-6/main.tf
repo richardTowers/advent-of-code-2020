@@ -2,7 +2,7 @@ locals {
   groups = [for group in split("\n\n", trimspace(file("input.txt"))):
     [for person in split("\n", group): split("", person)]
   ]
-  anyone_yes_counts   = [for g in local.groups: length(distinct(flatten(g))) ]
+  anyone_yes_counts   = [for g in local.groups: length(setunion(g...)) ]
   everyone_yes_counts = [for g in local.groups: length(setintersection(g...)) ]
 }
 
